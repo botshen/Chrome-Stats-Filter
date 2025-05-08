@@ -14,7 +14,7 @@ export default defineContentScript({
 
         if (!existingButton) {
           const buttonContainer = document.createElement('div');
-          buttonContainer.className = 'flex gap-2 mt-4';
+          buttonContainer.style.cssText = 'display: flex; gap: 0.5rem; margin-top: 1rem;';
 
           const button = document.createElement('button');
           button.id = 'custom-action-btn';
@@ -131,8 +131,8 @@ export default defineContentScript({
           // 创建清空过滤器的按钮
           const clearButton = document.createElement('button');
           clearButton.id = 'clear-filters-btn';
-          clearButton.className = 'btn btn-secondary';
-          clearButton.textContent = '清空过滤器';
+          clearButton.className = 'btn btn-secondary !ml-2';
+          clearButton.textContent = 'Clear Filters';
           clearButton.onclick = () => {
             console.log('清空过滤器按钮被点击');
             const url = new URL(window.location.href);
@@ -170,6 +170,15 @@ export default defineContentScript({
               grandParent.style.display = 'none';
               grandParent.style.position = 'absolute';
               grandParent.style.visibility = 'hidden';
+
+              // 隐藏grandParent前面的span元素
+              const previousElement = grandParent.previousElementSibling;
+              if (previousElement && previousElement.tagName.toLowerCase() === 'span') {
+                console.log('隐藏span元素:', previousElement);
+                (previousElement as HTMLElement).style.display = 'none';
+                (previousElement as HTMLElement).style.position = 'absolute';
+                (previousElement as HTMLElement).style.visibility = 'hidden';
+              }
             }
           }
         });

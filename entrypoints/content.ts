@@ -11,14 +11,76 @@ export default defineContentScript({
         // 检查是否已经存在我们的按钮，避免重复注入
         const existingButton = document.querySelector('#custom-action-btn');
         const existingClearButton = document.querySelector('#clear-filters-btn');
+        const existingPrevButton = document.querySelector('#prev-page-btn');
 
         if (!existingButton) {
           const buttonContainer = document.createElement('div');
           buttonContainer.style.cssText = 'display: flex; gap: 0.5rem; margin-top: 1rem;';
 
+          // 创建上一页按钮
+          const prevButton = document.createElement('button');
+          prevButton.id = 'prev-page-btn';
+          prevButton.className = 'btn btn-primary';
+          prevButton.textContent = 'Previous Page';
+          prevButton.onclick = () => {
+            console.log('上一页按钮被点击');
+            const url = new URL(window.location.href);
+            const queryParams = url.searchParams;
+            const q = queryParams.get('q');
+
+            if (q) {
+              try {
+                // 使用js-base64库进行解码
+                const decodedQ = Base64.decode(q);
+                // 解析JSON
+                const queryObject = JSON.parse(decodedQ);
+                console.log('queryObject', queryObject);
+
+                // 处理查询对象并返回到上一页
+                if (queryObject.o === 'AND' && Array.isArray(queryObject.c)) {
+                  // 找出所有name!=条件的索引
+                  const nameNotEqualConditions: number[] = [];
+                  queryObject.c.forEach((condition: any, index: number) => {
+                    if (condition.c === 'name' && condition.o === '!=' && typeof condition.v === 'string') {
+                      nameNotEqualConditions.push(index);
+                    }
+                  });
+
+                  // 确定要删除的条件数量（最多5个）
+                  const removeCount = Math.min(5, nameNotEqualConditions.length);
+
+                  if (removeCount > 0) {
+                    // 从后往前删除条件（需要按索引从大到小删除以避免删除过程中索引变化问题）
+                    const indicesToRemove = nameNotEqualConditions.slice(-removeCount).sort((a, b) => b - a);
+                    for (const index of indicesToRemove) {
+                      queryObject.c.splice(index, 1);
+                    }
+
+                    // 将更新后的queryObject编码回URL
+                    const newQueryString = JSON.stringify(queryObject);
+                    console.log('新的查询对象:', newQueryString);
+
+                    // 使用js-base64库进行URL安全的Base64编码
+                    const base64Encoded = Base64.encodeURI(newQueryString);
+
+                    // 更新URL并跳转
+                    queryParams.set('q', base64Encoded);
+                    const newUrl = `${url.origin}${url.pathname}?${queryParams.toString()}`;
+                    console.log('新的URL:', newUrl);
+                    window.location.href = newUrl;
+                  } else {
+                    console.log('没有找到name!=条件可以删除');
+                  }
+                }
+              } catch (error) {
+                console.error('解码失败:', error);
+              }
+            }
+          };
+
           const button = document.createElement('button');
           button.id = 'custom-action-btn';
-          button.className = 'btn btn-primary';
+          button.className = 'btn btn-primary !ml-2';
           button.textContent = 'Next Page';
           button.onclick = () => {
             console.log('按钮被点击');
@@ -140,6 +202,7 @@ export default defineContentScript({
             window.location.href = url.toString();
           };
 
+          buttonContainer.appendChild(prevButton);
           buttonContainer.appendChild(button);
           buttonContainer.appendChild(clearButton);
           table.insertAdjacentElement('afterend', buttonContainer);

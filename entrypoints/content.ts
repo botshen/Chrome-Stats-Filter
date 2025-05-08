@@ -3,12 +3,12 @@ import { Base64 } from 'js-base64';
 export default defineContentScript({
   matches: ['*://*.chrome-stats.com/*'],
   main() {
-    // 封装删除元素的逻辑为函数
+    // Function to handle element modifications
     const removeElements = () => {
-      // 注入按钮
+      // Inject buttons
       const table = document.querySelector('table');
       if (table) {
-        // 检查是否已经存在我们的按钮，避免重复注入
+        // Check if our buttons already exist to avoid duplicate injection
         const existingButton = document.querySelector('#custom-action-btn');
         const existingClearButton = document.querySelector('#clear-filters-btn');
         const existingPrevButton = document.querySelector('#prev-page-btn');
@@ -17,28 +17,28 @@ export default defineContentScript({
           const buttonContainer = document.createElement('div');
           buttonContainer.style.cssText = 'display: flex; gap: 0.5rem; margin-top: 1rem;';
 
-          // 创建上一页按钮
+          // Create Previous Page button
           const prevButton = document.createElement('button');
           prevButton.id = 'prev-page-btn';
           prevButton.className = 'btn btn-primary';
           prevButton.textContent = 'Previous Page';
           prevButton.onclick = () => {
-            console.log('上一页按钮被点击');
+            console.log('Previous page button clicked');
             const url = new URL(window.location.href);
             const queryParams = url.searchParams;
             const q = queryParams.get('q');
 
             if (q) {
               try {
-                // 使用js-base64库进行解码
+                // Decode using js-base64 library
                 const decodedQ = Base64.decode(q);
-                // 解析JSON
+                // Parse JSON
                 const queryObject = JSON.parse(decodedQ);
                 console.log('queryObject', queryObject);
 
-                // 处理查询对象并返回到上一页
+                // Process query object and navigate to previous page
                 if (queryObject.o === 'AND' && Array.isArray(queryObject.c)) {
-                  // 找出所有name!=条件的索引
+                  // Find all name!= condition indices
                   const nameNotEqualConditions: number[] = [];
                   queryObject.c.forEach((condition: any, index: number) => {
                     if (condition.c === 'name' && condition.o === '!=' && typeof condition.v === 'string') {
@@ -46,34 +46,34 @@ export default defineContentScript({
                     }
                   });
 
-                  // 确定要删除的条件数量（最多5个）
+                  // Determine number of conditions to remove (max 5)
                   const removeCount = Math.min(5, nameNotEqualConditions.length);
 
                   if (removeCount > 0) {
-                    // 从后往前删除条件（需要按索引从大到小删除以避免删除过程中索引变化问题）
+                    // Remove conditions from back to front (need to delete in descending index order to avoid index change issues)
                     const indicesToRemove = nameNotEqualConditions.slice(-removeCount).sort((a, b) => b - a);
                     for (const index of indicesToRemove) {
                       queryObject.c.splice(index, 1);
                     }
 
-                    // 将更新后的queryObject编码回URL
+                    // Encode updated queryObject back to URL
                     const newQueryString = JSON.stringify(queryObject);
-                    console.log('新的查询对象:', newQueryString);
+                    console.log('New query object:', newQueryString);
 
-                    // 使用js-base64库进行URL安全的Base64编码
+                    // Use js-base64 library for URL-safe Base64 encoding
                     const base64Encoded = Base64.encodeURI(newQueryString);
 
-                    // 更新URL并跳转
+                    // Update URL and navigate
                     queryParams.set('q', base64Encoded);
                     const newUrl = `${url.origin}${url.pathname}?${queryParams.toString()}`;
-                    console.log('新的URL:', newUrl);
+                    console.log('New URL:', newUrl);
                     window.location.href = newUrl;
                   } else {
-                    console.log('没有找到name!=条件可以删除');
+                    console.log('No name!= conditions found to remove');
                   }
                 }
               } catch (error) {
-                console.error('解码失败:', error);
+                console.error('Decoding failed:', error);
               }
             }
           };
@@ -83,23 +83,23 @@ export default defineContentScript({
           button.className = 'btn btn-primary !ml-2';
           button.textContent = 'Next Page';
           button.onclick = () => {
-            console.log('按钮被点击');
-            // 这里可以添加按钮点击后的具体操作
-            // 获取url的query参数
+            console.log('Button clicked');
+            // Add specific actions after button click
+            // Get URL query parameters
             const url = new URL(window.location.href);
             const queryParams = url.searchParams;
             const q = queryParams.get('q');
 
-            // 定义处理查询对象的函数
+            // Define function to process query and redirect
             const processQueryAndRedirect = (queryObject: any) => {
-              // 获取table元素的所有Name值
+              // Get all Name values from table
               const table = document.querySelector('table');
               if (table) {
                 const nameValues: string[] = [];
-                // 获取所有行
+                // Get all rows
                 const rows = table.querySelectorAll('tbody tr');
                 rows.forEach(row => {
-                  // 第三列是Name列（索引从0开始）
+                  // Third column is Name column (index starts at 0)
                   const nameCell = row.querySelector('td:nth-child(3)');
                   if (nameCell) {
                     const nameLink = nameCell.querySelector('a');
@@ -109,17 +109,17 @@ export default defineContentScript({
                   }
                 });
 
-                // 定义条件类型接口
+                // Define condition type interface
                 interface Condition {
                   c: string;
                   o: string;
                   v: string | number;
                 }
 
-                // 收集已有的排除名称
+                // Collect existing excluded names
                 const existingExcludedNames = new Set<string>();
 
-                // 查找已有的 name != 条件
+                // Find existing name != conditions
                 if (queryObject.o === 'AND' && Array.isArray(queryObject.c)) {
                   queryObject.c.forEach((condition: Condition) => {
                     if (condition.c === 'name' && condition.o === '!=' && typeof condition.v === 'string') {
@@ -128,10 +128,10 @@ export default defineContentScript({
                   });
                 }
 
-                // 添加新的排除名称
+                // Add new excluded names
                 nameValues.forEach(name => {
                   if (!existingExcludedNames.has(name)) {
-                    // 添加新的 name != 条件
+                    // Add new name != condition
                     queryObject.c.push({
                       c: 'name',
                       o: '!=',
@@ -141,37 +141,48 @@ export default defineContentScript({
                   }
                 });
 
-                // 将更新后的queryObject编码回URL
+                // Encode updated queryObject back to URL
                 const newQueryString = JSON.stringify(queryObject);
-                console.log('新的查询对象:', newQueryString);
+                console.log('New query object:', newQueryString);
 
-                // 使用js-base64库进行URL安全的Base64编码
+                // Check if condition count has reached 60
+                const nameNotEqualConditionsCount = queryObject.c.filter(
+                  (condition: Condition) => condition.c === 'name' && condition.o === '!='
+                ).length;
+
+                if (nameNotEqualConditionsCount >= 60) {
+                  console.log('Filter conditions have reached maximum number (60), cannot add more');
+                  alert('Filter conditions have reached maximum number (60), cannot add more');
+                  return;
+                }
+
+                // Use js-base64 library for URL-safe Base64 encoding
                 const base64Encoded = Base64.encodeURI(newQueryString);
 
-                // 更新URL并跳转
+                // Update URL and navigate
                 queryParams.set('q', base64Encoded);
                 const newUrl = `${url.origin}${url.pathname}?${queryParams.toString()}`;
-                console.log('新的URL:', newUrl);
+                console.log('New URL:', newUrl);
                 window.location.href = newUrl;
               }
             };
 
-            // 处理查询参数
+            // Process query parameters
             if (q) {
               try {
-                // 使用js-base64库进行解码
+                // Decode using js-base64 library
                 const decodedQ = Base64.decode(q);
-                // 解析JSON
+                // Parse JSON
                 const queryObject = JSON.parse(decodedQ);
                 console.log('queryObject', queryObject);
 
-                // 使用共用处理函数
+                // Use shared processing function
                 processQueryAndRedirect(queryObject);
               } catch (error) {
-                console.error('解码失败:', error);
+                console.error('Decoding failed:', error);
               }
             } else {
-              // 使用默认的查询对象
+              // Use default query object
               const defaultQuery = {
                 "o": "AND",
                 "c": [
@@ -183,20 +194,20 @@ export default defineContentScript({
                 ]
               };
 
-              // 使用共用处理函数
+              // Use shared processing function
               processQueryAndRedirect(defaultQuery);
             }
 
 
           };
 
-          // 创建清空过滤器的按钮
+          // Create Clear Filters button
           const clearButton = document.createElement('button');
           clearButton.id = 'clear-filters-btn';
           clearButton.className = 'btn btn-secondary !ml-2';
           clearButton.textContent = 'Clear Filters';
           clearButton.onclick = () => {
-            console.log('清空过滤器按钮被点击');
+            console.log('Clear filters button clicked');
             const url = new URL(window.location.href);
             url.searchParams.delete('q');
             window.location.href = url.toString();
@@ -206,13 +217,47 @@ export default defineContentScript({
           buttonContainer.appendChild(button);
           buttonContainer.appendChild(clearButton);
           table.insertAdjacentElement('afterend', buttonContainer);
+
+          // Display filter condition count (if query parameters exist)
+          const url = new URL(window.location.href);
+          const queryParams = url.searchParams;
+          const q = queryParams.get('q');
+
+          if (q) {
+            try {
+              const decodedQ = Base64.decode(q);
+              const queryObject = JSON.parse(decodedQ);
+
+              if (queryObject.o === 'AND' && Array.isArray(queryObject.c)) {
+                const nameNotEqualConditions = queryObject.c.filter(
+                  (condition: any) => condition.c === 'name' && condition.o === '!='
+                );
+
+                const filterCountInfo = document.createElement('div');
+                filterCountInfo.id = 'filter-count-info';
+                filterCountInfo.className = 'text-sm text-gray-600 mt-2';
+                filterCountInfo.textContent = `Currently ${nameNotEqualConditions.length} filtered applications`;
+                buttonContainer.after(filterCountInfo);
+
+                // If filter conditions exceed 60, disable the "Next Page" button
+                const nextPageBtn = document.getElementById('custom-action-btn') as HTMLButtonElement;
+                if (nextPageBtn && nameNotEqualConditions.length >= 60) {
+                  nextPageBtn.disabled = true;
+                  nextPageBtn.title = "Maximum filter count reached (60)";
+                  nextPageBtn.className = 'btn btn-secondary !ml-2 opacity-50 cursor-not-allowed';
+                }
+              }
+            } catch (error) {
+              console.error('Failed to parse query parameters:', error);
+            }
+          }
         }
       }
 
-      // 找到 group-container 元素
+      // Find the group-container element
       const groupContainer = document.querySelector('.group-container');
       if (groupContainer) {
-        // 移动到 .page-controls 后面
+        // Move after .page-controls
         const pageControls = document.querySelector('.page-controls');
         if (pageControls) {
           pageControls.insertAdjacentElement('afterend', groupContainer);
@@ -221,20 +266,20 @@ export default defineContentScript({
 
     };
 
-    // 初始执行一次
+    // Initial execution
     removeElements();
 
-    // 监听URL变化
+    // Monitor URL changes
     let lastUrl = location.href;
     const observer = new MutationObserver(() => {
       if (location.href !== lastUrl) {
         lastUrl = location.href;
-        console.log('URL变化，重新执行removeElements');
+        console.log('URL changed, re-executing removeElements');
         removeElements();
       }
     });
 
-    // 配置观察选项
+    // Configure observation options
     observer.observe(document, { subtree: true, childList: true });
   },
 });

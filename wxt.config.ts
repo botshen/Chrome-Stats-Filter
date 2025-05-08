@@ -7,15 +7,9 @@ export default defineConfig({
     disabled: true,
   },
   manifest: {
-    // default_locale: 'en',
     action: {},
-    name: 'chrome-stats',
-    description: 'chrome-stats',
+    name: 'chrome-stats-filter-helper',
+    description: 'chrome-stats filter helper',
     version: '0.0.1',
-    permissions: [
-      'storage',
-      'activeTab',
-      'tabs',
-    ],
   },
 });

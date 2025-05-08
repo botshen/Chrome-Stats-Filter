@@ -145,65 +145,33 @@ export default defineContentScript({
           table.insertAdjacentElement('afterend', buttonContainer);
         }
       }
-      // 删除升级提示链接
-      const upgradeLinks = document.querySelectorAll('a.btn-danger[href="/pricing"]');
-      upgradeLinks.forEach(link => {
-        if (link.textContent?.includes('Only 5 records are shown')) {
-          link.remove();
+
+      // 找到 group-container 元素
+      const groupContainer = document.querySelector('.group-container');
+      if (groupContainer) {
+        // 移动到 .page-controls 后面
+        const pageControls = document.querySelector('.page-controls');
+        if (pageControls) {
+          pageControls.insertAdjacentElement('afterend', groupContainer);
         }
-      });
-
-      // 获取div.conditions-container里面 所有按钮内容为 != 的元素
-      const conditionsContainer = document.querySelector('.conditions-container');
-      const notEqualButtons: Element[] = [];
-
-      if (conditionsContainer) {
-        const buttons = conditionsContainer.querySelectorAll('button');
-        buttons.forEach(button => {
-          if (button.textContent?.includes('!=')) {
-            notEqualButtons.push(button);
-            // 获取按钮的上一层父元素的上一层父元素并隐藏
-            const grandParent = button.parentElement?.parentElement;
-            if (grandParent) {
-              console.log('隐藏条件元素:', grandParent);
-              // 使用CSS样式隐藏元素并使其不占用文档流
-              grandParent.style.display = 'none';
-              grandParent.style.position = 'absolute';
-              grandParent.style.visibility = 'hidden';
-
-              // 隐藏grandParent前面的span元素
-              const previousElement = grandParent.previousElementSibling;
-              if (previousElement && previousElement.tagName.toLowerCase() === 'span') {
-                console.log('隐藏span元素:', previousElement);
-                (previousElement as HTMLElement).style.display = 'none';
-                (previousElement as HTMLElement).style.position = 'absolute';
-                (previousElement as HTMLElement).style.visibility = 'hidden';
-              }
-            }
-          }
-        });
       }
-
-      console.log('notEqualButtons', notEqualButtons);
 
     };
 
     // 初始执行一次
     removeElements();
 
-    // 监听 URL 变化
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.type === 'childList') {
-          removeElements();
-        }
-      });
+    // 监听URL变化
+    let lastUrl = location.href;
+    const observer = new MutationObserver(() => {
+      if (location.href !== lastUrl) {
+        lastUrl = location.href;
+        console.log('URL变化，重新执行removeElements');
+        removeElements();
+      }
     });
 
-    // 监听 body 元素的变化
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
+    // 配置观察选项
+    observer.observe(document, { subtree: true, childList: true });
   },
 });

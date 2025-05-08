@@ -124,6 +124,8 @@ export default defineContentScript({
               // 使用共用处理函数
               processQueryAndRedirect(defaultQuery);
             }
+
+
           };
 
           // 创建清空过滤器的按钮
@@ -150,16 +152,30 @@ export default defineContentScript({
           link.remove();
         }
       });
-      return;
-      const groupContainers = document.querySelectorAll('div.group-container');
-      console.log('groupContainers', groupContainers);
-      groupContainers.forEach(container => {
-        container.remove();
-      });
 
+      // 获取div.conditions-container里面 所有按钮内容为 != 的元素
+      const conditionsContainer = document.querySelector('.conditions-container');
+      const notEqualButtons: Element[] = [];
 
+      if (conditionsContainer) {
+        const buttons = conditionsContainer.querySelectorAll('button');
+        buttons.forEach(button => {
+          if (button.textContent?.includes('!=')) {
+            notEqualButtons.push(button);
+            // 获取按钮的上一层父元素的上一层父元素并隐藏
+            const grandParent = button.parentElement?.parentElement;
+            if (grandParent) {
+              console.log('隐藏条件元素:', grandParent);
+              // 使用CSS样式隐藏元素并使其不占用文档流
+              grandParent.style.display = 'none';
+              grandParent.style.position = 'absolute';
+              grandParent.style.visibility = 'hidden';
+            }
+          }
+        });
+      }
 
-
+      console.log('notEqualButtons', notEqualButtons);
 
     };
 

@@ -27,87 +27,102 @@ export default defineContentScript({
             const url = new URL(window.location.href);
             const queryParams = url.searchParams;
             const q = queryParams.get('q');
-            // q 是base64编码的，需要解码
+
+            // 定义处理查询对象的函数
+            const processQueryAndRedirect = (queryObject: any) => {
+              // 获取table元素的所有Name值
+              const table = document.querySelector('table');
+              if (table) {
+                const nameValues: string[] = [];
+                // 获取所有行
+                const rows = table.querySelectorAll('tbody tr');
+                rows.forEach(row => {
+                  // 第三列是Name列（索引从0开始）
+                  const nameCell = row.querySelector('td:nth-child(3)');
+                  if (nameCell) {
+                    const nameLink = nameCell.querySelector('a');
+                    if (nameLink) {
+                      nameValues.push(nameLink.textContent || '');
+                    }
+                  }
+                });
+
+                // 定义条件类型接口
+                interface Condition {
+                  c: string;
+                  o: string;
+                  v: string | number;
+                }
+
+                // 收集已有的排除名称
+                const existingExcludedNames = new Set<string>();
+
+                // 查找已有的 name != 条件
+                if (queryObject.o === 'AND' && Array.isArray(queryObject.c)) {
+                  queryObject.c.forEach((condition: Condition) => {
+                    if (condition.c === 'name' && condition.o === '!=' && typeof condition.v === 'string') {
+                      existingExcludedNames.add(condition.v);
+                    }
+                  });
+                }
+
+                // 添加新的排除名称
+                nameValues.forEach(name => {
+                  if (!existingExcludedNames.has(name)) {
+                    // 添加新的 name != 条件
+                    queryObject.c.push({
+                      c: 'name',
+                      o: '!=',
+                      v: name
+                    });
+                    existingExcludedNames.add(name);
+                  }
+                });
+
+                // 将更新后的queryObject编码回URL
+                const newQueryString = JSON.stringify(queryObject);
+                console.log('新的查询对象:', newQueryString);
+
+                // 使用js-base64库进行URL安全的Base64编码
+                const base64Encoded = Base64.encodeURI(newQueryString);
+
+                // 更新URL并跳转
+                queryParams.set('q', base64Encoded);
+                const newUrl = `${url.origin}${url.pathname}?${queryParams.toString()}`;
+                console.log('新的URL:', newUrl);
+                window.location.href = newUrl;
+              }
+            };
+
+            // 处理查询参数
             if (q) {
               try {
                 // 使用js-base64库进行解码
                 const decodedQ = Base64.decode(q);
-
                 // 解析JSON
                 const queryObject = JSON.parse(decodedQ);
-                console.log('queryObject', queryObject)
-                // 获取table元素的所有Name值
-                const table = document.querySelector('table');
-                if (table) {
-                  const nameValues: string[] = [];
-                  // 获取所有行
-                  const rows = table.querySelectorAll('tbody tr');
-                  rows.forEach(row => {
-                    // 第三列是Name列（索引从0开始）
-                    const nameCell = row.querySelector('td:nth-child(3)');
-                    if (nameCell) {
-                      const nameLink = nameCell.querySelector('a');
-                      if (nameLink) {
-                        nameValues.push(nameLink.textContent || '');
-                      }
-                    }
-                  });
+                console.log('queryObject', queryObject);
 
-                  // 定义条件类型接口
-                  interface Condition {
-                    c: string;
-                    o: string;
-                    v: string | number;
-                  }
-
-                  // 收集已有的排除名称
-                  const existingExcludedNames = new Set<string>();
-
-                  // 查找已有的 name != 条件
-                  if (queryObject.o === 'AND' && Array.isArray(queryObject.c)) {
-                    queryObject.c.forEach((condition: Condition) => {
-                      if (condition.c === 'name' && condition.o === '!=' && typeof condition.v === 'string') {
-                        existingExcludedNames.add(condition.v);
-                      }
-                    });
-                  }
-
-                  // 添加新的排除名称
-                  nameValues.forEach(name => {
-                    if (!existingExcludedNames.has(name)) {
-                      // 添加新的 name != 条件
-                      queryObject.c.push({
-                        c: 'name',
-                        o: '!=',
-                        v: name
-                      });
-                      existingExcludedNames.add(name);
-                    }
-                  });
-
-                  // 将更新后的queryObject编码回URL
-                  const newQueryString = JSON.stringify(queryObject);
-                  console.log('新的查询对象:', newQueryString);
-
-                  // 使用js-base64库进行URL安全的Base64编码
-                  const base64Encoded = Base64.encodeURI(newQueryString);
-
-                  // 更新URL并跳转
-                  queryParams.set('q', base64Encoded);
-                  const newUrl = `${url.origin}${url.pathname}?${queryParams.toString()}`;
-                  console.log('新的URL:', newUrl);
-                  window.location.href = newUrl;
-                }
+                // 使用共用处理函数
+                processQueryAndRedirect(queryObject);
               } catch (error) {
                 console.error('解码失败:', error);
               }
             } else {
-              const _q = 'eyJvIjoiQU5EIiwiYyI6W3siYyI6InVzZXJDb3VudCIsIm8iOiI-PSIsInYiOjEwMDAwMH0seyJjIjoibmFtZSIsIm8iOiIhPSIsInYiOiJkb250LXJlbW92ZS1tZSJ9XX0'
-              // 设置 q 为 _q
-              queryParams.set('q', _q);
-              const newUrl = `${url.origin}${url.pathname}?${queryParams.toString()}`;
-              console.log('新的URL:', newUrl);
-              window.location.href = newUrl;
+              // 使用默认的查询对象
+              const defaultQuery = {
+                "o": "AND",
+                "c": [
+                  {
+                    "c": "userCount",
+                    "o": ">=",
+                    "v": 100000
+                  }
+                ]
+              };
+
+              // 使用共用处理函数
+              processQueryAndRedirect(defaultQuery);
             }
           };
 

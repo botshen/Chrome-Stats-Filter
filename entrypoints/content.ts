@@ -7,6 +7,7 @@ export default defineContentScript({
     const removeElements = () => {
       // Inject buttons
       const table = document.querySelector('table');
+      console.log('table', table)
       if (table) {
         // Check if our buttons already exist to avoid duplicate injection
         const existingButton = document.querySelector('#custom-action-btn');
@@ -266,20 +267,33 @@ export default defineContentScript({
 
     };
 
-    // Initial execution
-    removeElements();
+    // 确保元素持续存在，监听DOM变化
+    const setupDomObserver = () => {
+      // 先执行一次初始注入
+      removeElements();
 
-    // Monitor URL changes
-    let lastUrl = location.href;
-    const observer = new MutationObserver(() => {
-      if (location.href !== lastUrl) {
-        lastUrl = location.href;
-        console.log('URL changed, re-executing removeElements');
-        removeElements();
-      }
-    });
+      // 创建MutationObserver监听DOM变化
+      const domObserver = new MutationObserver((mutations) => {
+        // 检查是否需要重新注入按钮
+        const customButton = document.querySelector('#custom-action-btn');
+        const table = document.querySelector('table');
 
-    // Configure observation options
-    observer.observe(document, { subtree: true, childList: true });
+        if (table && !customButton) {
+          console.log('Table exists but custom button missing, re-injecting elements');
+          removeElements();
+        }
+      });
+
+      // 配置观察选项
+      domObserver.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+
+      return domObserver;
+    };
+
+    // 初始执行
+    setupDomObserver();
   },
 });

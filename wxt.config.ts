@@ -10,6 +10,6 @@ export default defineConfig({
     action: {},
     name: 'chrome-stats-filter-helper',
     description: 'chrome-stats filter helper',
-    version: '0.0.1',
+    version: '0.0.2',
   },
 });

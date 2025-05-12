@@ -105,7 +105,29 @@ export default defineContentScript({
                   if (nameCell) {
                     const nameLink = nameCell.querySelector('a');
                     if (nameLink) {
-                      nameValues.push(nameLink.textContent || '');
+                      // 获取原始名称文本，排除翻译内容
+                      let nameText = '';
+
+                      // 方法1：获取第一个文本节点的内容
+                      const textNodes = Array.from(nameLink.childNodes)
+                        .filter(node => node.nodeType === Node.TEXT_NODE);
+
+                      if (textNodes.length > 0) {
+                        nameText = textNodes[0].textContent || '';
+                      } else {
+                        // 方法2：如果没有纯文本节点，尝试获取链接的直接文本内容
+                        nameText = nameLink.textContent || '';
+
+                        // 移除可能存在的翻译文本（一般在换行符后面）
+                        const newlineIndex = nameText.indexOf('\n');
+                        if (newlineIndex !== -1) {
+                          nameText = nameText.substring(0, newlineIndex).trim();
+                        }
+                      }
+
+                      if (nameText) {
+                        nameValues.push(nameText);
+                      }
                     }
                   }
                 });
